@@ -16,13 +16,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import gammatone
 import matplotlib.pyplot as plt
 import numpy
 import scipy.io.wavfile
 import sys
-
-sys.path.append('/home/mbernard/dev/libgammatone/build/python')
-import gammatone
 
 
 def parse_args(argv=sys.argv[1:]):
@@ -146,6 +144,50 @@ class CatchExceptions(object):
             self._exit('keyboard interruption, exiting')
 
 
+def plot_gammatone(sample_frequency, center_frequencies, data):
+    data = data[:100][:].T ** (1.0/3)
+    time = numpy.linspace(
+        0, data.shape[0] / float(sample_frequency), data.shape[0])
+
+    y = numpy.array([center_frequencies, ] * data.shape[0]).T
+    x = numpy.array([time, ] * data.shape[1])
+
+    # print 'y', y.shape
+    # print y
+
+    # print 'x', x.shape
+    # print x
+
+    # print 'data', data.shape
+    # print data
+
+    data_min, data_max = -numpy.abs(data).max(), numpy.abs(data).max()
+
+    plt.imshow(data, cmap='RdBu', vmin=data_min, vmax=data_max,
+     #          extent=[x.min(), x.max(), y.min(), y.max()],
+               interpolation='nearest', origin='lower')
+    #plt.title('image (interp. nearest)')
+    plt.colorbar()
+
+    plt.show()
+
+    # #x = data
+    # data = data[:100][:]
+    # print data.shape
+    # print data
+    # interp = 'bilinear'
+    # #interp = 'nearest'
+    # lim = 0, data.shape[0], 0, data.shape[1]
+    # #plt.subplot(211, axisbg='g')
+    # #plt.title('blue should be up')
+    # plt.imshow(data, origin='upper', interpolation=interp, cmap='jet')
+    # plt.axis(lim)
+    # plt.subplot(212, axisbg='y')
+    # plt.title('blue should be down')
+    # plt.imshow(x, origin='lower', interpolation=interp, cmap='jet')
+    # #plt.axis(lim)
+    # plt.show()
+
 @CatchExceptions
 def main(argv=sys.argv[1:]):
     args = parse_args(argv)
@@ -157,15 +199,8 @@ def main(argv=sys.argv[1:]):
         data, sample_frequency,
         nb_channels=args.nb_channels,
         low_cf=low_cf, high_cf=high_cf)
-    print output.shape
 
-    fig, ax1 = plt.subplots(nrows=1)
-    # data, freqs, bins, im = ax1.specgram(output)
-    # ax1.axis('tight')
-    # plt.show()
-    ax1.set_yscale('symlog', linthreshy=0.01)
-    ax1.pcolor(range(data.shape[0]), center_frequencies, output)
-
+    plot_gammatone(sample_frequency, center_frequencies, output)
 
 if __name__ == '__main__':
     main()
