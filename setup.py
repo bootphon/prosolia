@@ -16,16 +16,14 @@
 
 import setuptools
 
-VERSION = '0.1'
-
 setuptools.setup(
     name='prosolia',
-    version=VERSION,
+    version='0.1',
     author='Mathieu Bernard',
     author_email='mmathieubernardd@gmail.com',
     license='GPL3',
 
-    description='speech features extraction pipeline for prosody analysis',
+    description='Speech features extraction pipeline for prosody analysis',
     long_description=open('README.md').read(),
 
     dependency_links=['https://github.com/detly/gammatone/archive/master.zip#egg=gammatone-1.0'],

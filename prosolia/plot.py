@@ -12,13 +12,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Plotting function for the prosalia pipeline"""
+"""Plotting functions for the prosalia pipeline"""
 
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-
-from gammatone.plot import ERBFormatter
 
 
 def plot_pipeline(sample_frequency, low_frequency, audio, energy,
@@ -57,12 +55,8 @@ def plot_audio(axes, data, sample_frequency):
     axes.plot(time, data)
 
 
-def _roundup(x):
-
-    return
-
-
 def plot_pitch(axes, duration, pov, pitch):
+    """Plot the pitch estimation and probability of voicing"""
     time = np.linspace(0, duration, num=len(pov))
 
     par1 = axes.twinx()
@@ -89,6 +83,7 @@ def plot_pitch(axes, duration, pov, pitch):
 def plot_filterbank(fig, axes, sample_frequency, low_cf, duration, data):
     """Plot the filterbank output as an image with colorbar"""
     # Set a nice formatter for the y-axis
+    from gammatone.plot import ERBFormatter
     formatter = ERBFormatter(low_cf, sample_frequency/2, unit='Hz', places=0)
     axes.yaxis.set_major_formatter(formatter)
 

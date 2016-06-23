@@ -112,8 +112,8 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         return output, center_frequencies
 
 
-def apply_dct(data, norm=None, n=8):
-    """Return the `n` first coefficients of the `data` DCT
+def apply_dct(data, norm=None, size=8):
+    """Return the `size` first coefficients of the `data` DCT
 
     Apply type 2 discrete cosine transfrom on the first axis of `data`
     (frequencies) over the second axis (time). Wrapper on
@@ -129,12 +129,12 @@ def apply_dct(data, norm=None, n=8):
         corresponding matrix of coefficients orthonormal, default is
         None
 
-    n (int): keep the n first coefficients of the output
+    size (int): keep the `size` first coefficients of the dct output
 
     Return:
     -------
 
-    dct_output: numpy array of shape (n, data.shape[1])
+    dct_output: numpy array of shape (size, data.shape[1])
 
     """
     from scipy.fftpack import dct
@@ -142,7 +142,7 @@ def apply_dct(data, norm=None, n=8):
     if norm is not 'ortho':
         norm = None
 
-    return dct(data, type=2, axis=0, norm=norm)[:n, :]
+    return dct(data, type=2, axis=0, norm=norm)[:size, :]
 
 
 def apply_pitch(kaldi_root, wavfile, sample_frequency, verbose=True):
