@@ -16,13 +16,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import matplotlib.pyplot as plt
 import os
-import scipy.io as sio
 import sys
+import scipy.io as sio
 
-import pipeline
-import plot
+import prosolia.pipeline as pipeline
+import prosolia.plot as plot
 
 
 class CatchExceptions(object):
@@ -107,7 +106,8 @@ def parse_args(argv=sys.argv[1:]):
     pi_parser = parser.add_argument_group('pitch and POV parameters')
     pi_parser.add_argument(
         '-k', '--kaldi-root', default='../kaldi',
-        help='root directory of the Kaldi distribution, default is %(default)s')
+        help='root directory of the Kaldi distribution, '
+        'default is %(default)s')
 
     args = parser.parse_args(argv)
 
@@ -122,8 +122,8 @@ def parse_args(argv=sys.argv[1:]):
     return args
 
 
-def save( filename, args, sample_frequency,
-          center_frequencies, energy, dct):
+def save(filename, args, sample_frequency,
+         center_frequencies, energy, dct, pov, pitch):
     sio.savemat(filename, {
         'wav': args.wav,
         'sample_frequency': sample_frequency,
@@ -132,7 +132,9 @@ def save( filename, args, sample_frequency,
         'overlap_time': args.overlap_time,
         'compression': args.compression,
         'energy': energy,
-        'dct': dct})
+        'dct': dct,
+        'pitch': pitch,
+        'pov': pov})
 
 
 @CatchExceptions
@@ -153,18 +155,21 @@ def main(argv=sys.argv[1:]):
         window_time=args.window_time, overlap_time=args.overlap_time,
         compression=args.compression)
 
+    # compute delta and delta-delta from energy
+    # TODO
+
     # compute DCT on energy
     dct_output = pipeline.apply_dct(energy)
 
     # compute pitch and probability of voicing
-    from kaldi_pitch import apply_pitch
-    pov, pitch = apply_pitch(args.kaldi_root, args.wav, sample_frequency, args.verbose)
+    pov, pitch = pipeline.apply_pitch(
+        args.kaldi_root, args.wav, sample_frequency, args.verbose)
 
     # save results
     if args.verbose:
         print('saving to {}'.format(args.output))
     save(args.output, args, sample_frequency, center_frequencies,
-         energy, dct_output)
+         energy, dct_output, pitch, pov)
 
     if args.plot:
         if args.verbose:

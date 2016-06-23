@@ -1,0 +1,13 @@
+* write the README.md and the setup.py
+** dependancies
+*** numpy
+*** scipy
+*** soundfile https://github.com/bastibe/PySoundFile
+*** cffi, libsoundfile
+*** gammatone https://github.com/detly/gammatone
+* all the parameters from config file, most important one from argparse
+* pitch: more parameters from Kaldi
+* compute delta an delta-delta on energy
+https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
+* optimize memory usage for long wavs
+-> tweak gammatone to eat buffered input

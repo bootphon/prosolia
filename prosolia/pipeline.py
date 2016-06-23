@@ -14,6 +14,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Implementation of the prosolia pipeline"""
 
+import os
+import shlex
+import shutil
+import subprocess
+import tempfile
+
 import numpy as np
 
 
@@ -95,15 +101,15 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         overlap_time, nb_channels, low_cf))
 
     # get the center frequencies in increasing order
-    cf = erb_space(low_cf, sample_frequency/2, nb_channels)[::-1]
+    center_frequencies = erb_space(low_cf, sample_frequency/2, nb_channels)[::-1]
 
     # compress the output
     compress = {'log': lambda X: 20 * np.log10(X),
                 'cubic': lambda X: X ** (1./3)}
     try:
-        return compress[compression](output), cf
+        return compress[compression](output), center_frequencies
     except KeyError:
-        return output, cf
+        return output, center_frequencies
 
 
 def apply_dct(data, norm=None, n=8):
@@ -136,4 +142,58 @@ def apply_dct(data, norm=None, n=8):
     if norm is not 'ortho':
         norm = None
 
-    return dct(data, type=2, axis=0, norm=norm)[:n,:]
+    return dct(data, type=2, axis=0, norm=norm)[:n, :]
+
+
+def apply_pitch(kaldi_root, wavfile, sample_frequency, verbose=True):
+    """Apply Kaldi pitch extractor on a wav file
+
+    Output is 2-dimensional features consisting of (NCCF, pitch in
+    Hz), where NCCF is between -1 and 1, and higher for voiced frames.
+
+    Raise:
+    ------
+
+    AssertionError if compute-kaldi-pitch-feats executable is not
+    found in the Kaldi tree
+
+    RuntimeError if compute-kaldi-pitch-feats failed
+
+    """
+    # locate the kaldi executable we want
+    kaldi_pitch = os.path.join(
+        kaldi_root, 'src', 'featbin', 'compute-kaldi-pitch-feats')
+    assert os.path.isfile(kaldi_pitch), '{} not found'.format(kaldi_pitch)
+
+    try:
+        # directory where kaldi read and write
+        tempdir = tempfile.mkdtemp()
+
+        # register wav input to kaldi
+        scp = os.path.join(tempdir, 'wav.scp')
+        with open(scp, 'w') as fscp:
+            fscp.write('{} {}\n'.format(
+                os.path.splitext(os.path.basename(wavfile))[0],
+                os.path.abspath(wavfile)))
+
+        # the kaldi pitch/pov output
+        pitch = os.path.join(tempdir, 'pitch.txt')
+
+        # the kaldi command to execute
+        command = (kaldi_pitch + ' --sample-frequency={0} scp:{1} ark,t:{2}'
+                   .format(sample_frequency, scp, pitch))
+
+        # execute it in a kaldi environment
+        stderr = None if verbose else open(os.devnull)
+        job = subprocess.Popen(shlex.split(command), cwd=tempdir, stderr=stderr)
+        job.wait()
+        if job.returncode != 0:
+            raise RuntimeError('command "{}" returned with {}'
+                               .format(command, job.returncode))
+
+        # return the result as two numpy vectors
+        a = np.loadtxt(pitch, skiprows=1, usecols=(0, 1))
+        return a[:, 0].T, a[:, 1].T
+
+    finally:
+        shutil.rmtree(tempdir)

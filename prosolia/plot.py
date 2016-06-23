@@ -14,18 +14,26 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Plotting function for the prosalia pipeline"""
 
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 
 from gammatone.plot import ERBFormatter
-from mpl_toolkits.axes_grid1 import ImageGrid
 
 
-def plot_pipeline(sample_frequency, low_frequency, audio, energy, dct_output, pov, pitch):
+def plot_pipeline(sample_frequency, low_frequency, audio, energy,
+                  dct_output, pov, pitch):
+    """Plot the whole prosalia output as 4 subplots
+
+    Displays audio signal (plot 1), probability of voicing and pitch
+    estimation (plot 2), filterbank output (plot 3) and DCT output
+    (plot 4).
+
+    """
     fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4)
     plot_audio(ax0, audio, sample_frequency)
 
-    plot_pitch(fig, ax1, len(audio)/sample_frequency, pov, pitch)
+    plot_pitch(ax1, len(audio)/sample_frequency, pov, pitch)
 
     plot_filterbank(
         fig, ax2, sample_frequency, low_frequency,
@@ -38,21 +46,23 @@ def plot_pipeline(sample_frequency, low_frequency, audio, energy, dct_output, po
     plt.show()
 
 
-
 def plot_audio(axes, data, sample_frequency):
-    time=np.linspace(0, len(data)/sample_frequency, num=len(data))
+    """Plot the audio signal"""
+    time = np.linspace(0, len(data)/sample_frequency, num=len(data))
+
     axes.set_xlabel('time (s)')
     axes.set_ylabel('amplitude')
     axes.set_xlim([0, time[-1]])
+
     axes.plot(time, data)
 
 
 def _roundup(x):
-    import math
-    return int(math.ceil(x / 100.0)) * 100
+
+    return
 
 
-def plot_pitch(fig, axes, duration, pov, pitch):
+def plot_pitch(axes, duration, pov, pitch):
     time = np.linspace(0, duration, num=len(pov))
 
     par1 = axes.twinx()
@@ -61,7 +71,9 @@ def plot_pitch(fig, axes, duration, pov, pitch):
 
     axes.set_xlim(0, duration)
     axes.set_ylim(-1, 1)
-    par1.set_ylim(0, _roundup(pitch.max()))
+
+    # round max pitch to the upper hundredth for nice plotting
+    par1.set_ylim(0, int(math.ceil(pitch.max() / 100.0)) * 100)
 
     axes.set_xlabel("time (s)")
     axes.set_ylabel("NFCC")
@@ -75,37 +87,19 @@ def plot_pitch(fig, axes, duration, pov, pitch):
 
 
 def plot_filterbank(fig, axes, sample_frequency, low_cf, duration, data):
-    grid = ImageGrid(
-        fig, (4, 1, 3),
-        nrows_ncols=(1, 1),
-        direction="row",
-        axes_pad=0.05,
-        add_all=True,
-        label_mode="1",
-        share_all=True,
-        cbar_location="right",
-        cbar_mode="each",
-        cbar_size="7%",
-        cbar_pad="1%",
-    )
-
+    """Plot the filterbank output as an image with colorbar"""
     # Set a nice formatter for the y-axis
     formatter = ERBFormatter(low_cf, sample_frequency/2, unit='Hz', places=0)
-    grid[0].yaxis.set_major_formatter(formatter)
+    axes.yaxis.set_major_formatter(formatter)
 
-    img = grid[0].imshow(data, extent=[0, duration, 1, 0], aspect='auto')
-    grid[0].set_xlabel("time (s)")
-    grid[0].set_ylabel("frequency")
-
-    fig.subplots_adjust(right=0.8)
-    #cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    #fig.colorbar(img, cax=cbar_ax)
-
-    #cbar = gri.cax.colorbar(img, ax=axes)
-    # cbar.set_label('energy')
+    img = axes.imshow(data, extent=[0, duration, 1, 0], aspect='auto')
+    axes.set_xlabel("time (s)")
+    axes.set_ylabel("frequency")
+    fig.colorbar(img, ax=axes)
 
 
 def plot_dct(fig, axes, duration, data):
+    """Plot the DCT output as an image with colorbar"""
     # n as in pipeline.apply_dct
     n = data.shape[0]
 
