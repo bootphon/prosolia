@@ -12,10 +12,33 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+"""Implementation of the prosolia pipeline"""
 
-from gammatone.gtgram import gtgram
-from gammatone.filters import erb_space
 import numpy as np
+
+
+def load_audio(filename, dtype=np.float64):
+    """Return audio data from a file
+
+    The wav file is assumed to be mono.
+
+    Parameters:
+    -----------
+
+    filename (string or openfile handle): input audio file
+
+    dtype: output scalar type (default is numpy.float64)
+
+    Returns:
+    --------
+
+    sample_frequency (int): sample frequency of the audio content in Hz
+
+    data (dtype numpy array): data read from file
+
+    """
+    import soundfile
+    return soundfile.read(filename, dtype=dtype)
 
 
 def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
@@ -63,6 +86,9 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         channel in Hz.
 
     """
+    from gammatone.gtgram import gtgram
+    from gammatone.filters import erb_space
+
     # get the filterbank output (with increasing frequencies)
     output = np.flipud(gtgram(
         data, sample_frequency, window_time,
@@ -78,3 +104,36 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         return compress[compression](output), cf
     except KeyError:
         return output, cf
+
+
+def apply_dct(data, norm=None, n=8):
+    """Return the `n` first coefficients of the `data` DCT
+
+    Apply type 2 discrete cosine transfrom on the first axis of `data`
+    (frequencies) over the second axis (time). Wrapper on
+    scipy.fftpack.dct.
+
+    Parameters:
+    -----------
+
+    data (2D numpy array): input array, first axis is frequency,
+        second axis is time
+
+    norm: if 'ortho', normalize the dct such that makes the
+        corresponding matrix of coefficients orthonormal, default is
+        None
+
+    n (int): keep the n first coefficients of the output
+
+    Return:
+    -------
+
+    dct_output: numpy array of shape (n, data.shape[1])
+
+    """
+    from scipy.fftpack import dct
+
+    if norm is not 'ortho':
+        norm = None
+
+    return dct(data, type=2, axis=0, norm=norm)[:n,:]
