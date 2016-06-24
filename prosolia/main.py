@@ -112,7 +112,8 @@ def main(argv=sys.argv[1:]):
         compression=config.get('energy', 'compression'))
 
     # compute delta and delta-delta from energy
-    # TODO delta, delta_delta = pipeline.apply_delta(energy)
+    delta = pipeline.apply_delta(energy)
+    delta_delta = pipeline.apply_deltadelta(energy)
 
     # compute DCT on energy
     dct = pipeline.apply_dct(
@@ -125,25 +126,25 @@ def main(argv=sys.argv[1:]):
         config['pitch']['kaldi_root'], args.wav, sample_frequency)
 
     # save results
-    if args.verbose:
-        print('saving to {}'.format(args.output))
+    log.info('saving to %s', args.output)
     sio.savemat(args.output, {
         'wav': args.wav,
         'config': config,
         'sample_frequency': sample_frequency,
         'center_frequencies': center_frequencies,
         'energy': energy,
+        'delta': delta,
+        'delta_delta': delta_delta,
         'dct': dct,
         'pitch': pitch,
         'pov': pov})
 
+    # plot results
     if args.plot:
-        if args.verbose:
-            print('plotting...')
         plot.plot_pipeline(
             sample_frequency,
             config.getfloat('filterbank', 'low_frequency'),
-            audio, energy, dct, pov, pitch)
+            audio, energy, delta, delta_delta, dct, pov, pitch)
 
 if __name__ == '__main__':
     main()

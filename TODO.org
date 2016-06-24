@@ -1,5 +1,4 @@
 * pitch: more parameters from Kaldi
-* compute delta an delta-delta on energy
-https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
+* improve plotting by using grids
 * optimize memory usage for long wavs
 -> tweak gammatone to eat buffered input

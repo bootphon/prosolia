@@ -19,7 +19,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_pipeline(sample_frequency, low_frequency, audio, energy,
+def plot_pipeline(sample_frequency, low_frequency, audio,
+                  energy, delta, delta_delta,
                   dct_output, pov, pitch):
     """Plot the whole prosalia output as 4 subplots
 
@@ -28,7 +29,7 @@ def plot_pipeline(sample_frequency, low_frequency, audio, energy,
     (plot 4).
 
     """
-    fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4)
+    fig, (ax0, ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=6)
     plot_audio(ax0, audio, sample_frequency)
 
     plot_pitch(ax1, len(audio)/sample_frequency, pov, pitch)
@@ -37,8 +38,15 @@ def plot_pipeline(sample_frequency, low_frequency, audio, energy,
         fig, ax2, sample_frequency, low_frequency,
         len(audio)/sample_frequency, energy)
 
-    plot_dct(
-        fig, ax3, len(audio)/sample_frequency, dct_output)
+    plot_filterbank(
+        fig, ax3, sample_frequency, low_frequency,
+        len(audio)/sample_frequency, delta)
+
+    plot_filterbank(
+        fig, ax4, sample_frequency, low_frequency,
+        len(audio)/sample_frequency, delta_delta)
+
+    plot_dct(fig, ax5, len(audio)/sample_frequency, dct_output)
 
     fig.tight_layout()
     plt.show()
@@ -88,8 +96,8 @@ def plot_filterbank(fig, axes, sample_frequency, low_cf, duration, data):
     axes.yaxis.set_major_formatter(formatter)
 
     img = axes.imshow(data, extent=[0, duration, 1, 0], aspect='auto')
-    axes.set_xlabel("time (s)")
-    axes.set_ylabel("frequency")
+    axes.set_xlabel('time (s)')
+    axes.set_ylabel('frequency')
     fig.colorbar(img, ax=axes)
 
 

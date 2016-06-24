@@ -126,6 +126,54 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
     return output, center_frequencies
 
 
+def apply_delta(energy):
+    """Compute delta from enregy features
+
+    From https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
+
+    """
+    logging.getLogger('prosolia').debug('computing delta')
+    import scipy.signal as sgn
+
+    nframes, nchannels = energy.shape
+    hlen = 4
+    a = np.r_[hlen:-hlen-1:-1] / 60
+    g = np.r_[np.array([energy[1, :] for x in range(hlen)]),
+              energy,
+              np.array([energy[nframes-1, :] for x in range(hlen)])]
+    flt = sgn.lfilter(a, 1, g.flat)
+    d = flt.reshape((nframes + 8, nchannels))
+    return np.array(d[8:, :])
+
+
+def apply_deltadelta(energy):
+    """Compute delta-delta from enregy features
+
+    From https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
+
+    """
+    logging.getLogger('prosolia').debug('computing delta-delta')
+    import scipy.signal as sgn
+
+    nframes, nchannels = energy.shape
+    hlen = 4
+    a = np.r_[hlen:-hlen-1:-1] / 60
+
+    hlen2 = 1
+    f = np.r_[hlen2:-hlen2-1:-1] / 2
+
+    g = np.r_[np.array([energy[1, :] for x in range(hlen+hlen2)]),
+              energy,
+              np.array([energy[nframes-1, :] for x in range(hlen+hlen2)])]
+
+    flt1 = sgn.lfilter(a, 1, g.flat)
+    h = flt1.reshape((nframes + 10, nchannels))[8:, :]
+
+    flt2 = sgn.lfilter(f, 1, h.flat)
+    dd = flt2.reshape((nframes + 2, nchannels))
+    return dd[2:, :]
+
+
 def apply_dct(data, norm=None, size=8):
     """Return the `size` first coefficients of the `data` DCT
 
@@ -154,7 +202,7 @@ def apply_dct(data, norm=None, size=8):
     if norm is not 'ortho':
         norm = None
 
-    logging.getLogger('prosolia').debug('computing DCT on energy')
+    logging.getLogger('prosolia').debug('computing DCT')
 
     from scipy.fftpack import dct
     return dct(data, type=2, axis=0, norm=norm)[:size, :]
