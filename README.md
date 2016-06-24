@@ -5,36 +5,38 @@
 ## Usage
 
 Once installed, prosolia is available as a command-line tool. To get
-in, simply have a ``prosolia --help``.
+in, simply have a `prosolia --help`.
 
 ## Installation
 
-* Using the [Anaconda][http://continuum.io/downloads] distribution of
+* Using the [Anaconda](http://continuum.io/downloads) distribution of
   Python 3 (conda is also available independently of Anaconda with
-  ``pip install conda; conda init``):
+  `pip install conda; conda init`):
 
-.. code:: bash
+``` shell
+conda install cffi numpy scipy matplotlib
+python setup.py build
+python setup.py install
+```
 
-    conda install cffi numpy scipy matplotlib
-    python setup.py build
-    python setup.py install
-
-* Prosalia relies on the system library ``libsndfile``. On Windows and
+* Prosalia relies on the system library `libsndfile`. On Windows and
   OS X, it is installed automatically. On Linux, you need to install
   libsndfile using your distribution's package manager, for example
-  ``sudo apt-get install libsndfile1``.
+  `sudo apt-get install libsndfile1`.
 
 * Install Kaldi by following the instructions from
   [here](http://kaldi-asr.org/doc/install.html). Basically, you have
   to do (from the `kaldi` directory):
 
-        cd tools
-        ./extras/check_dependancies.sh
-        make -j 4  # -j N do a parallel build on N CPUs
-        cd ../src
-        ./configure
-        make depend -j 4
-        make -j 4
+``` shell
+cd tools
+./extras/check_dependancies.sh
+make -j 4  # -j N do a parallel build on N CPUs
+cd ../src
+./configure
+make depend -j 4
+make -j 4
+```
 
 ## Licence
 
