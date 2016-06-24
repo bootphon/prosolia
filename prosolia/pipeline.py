@@ -108,7 +108,8 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         nb_channels, compression)
 
     # get the center frequencies in increasing order
-    center_frequencies = erb_space(low_cf, sample_frequency/2, nb_channels)[::-1]
+    center_frequencies = erb_space(
+        low_cf, sample_frequency/2, nb_channels)[::-1]
 
     # get the filterbank output (with increasing frequencies)
     output = np.flipud(gtgram(
@@ -133,17 +134,18 @@ def apply_delta(energy):
 
     """
     logging.getLogger('prosolia').debug('computing delta')
-    import scipy.signal as sgn
+    from scipy.signal import lfilter
 
-    nframes, nchannels = energy.shape
+    X = energy.T
+
+    nframes, nchannels = X.shape
     hlen = 4
     a = np.r_[hlen:-hlen-1:-1] / 60
-    g = np.r_[np.array([energy[1, :] for x in range(hlen)]),
-              energy,
-              np.array([energy[nframes-1, :] for x in range(hlen)])]
-    flt = sgn.lfilter(a, 1, g.flat)
-    d = flt.reshape((nframes + 8, nchannels))
-    return np.array(d[8:, :])
+    g = np.r_[np.array([X[1, :] for _ in range(hlen)]),
+              X,
+              np.array([X[-1, :] for _ in range(hlen)])]
+
+    return lfilter(a, 1, g)[hlen:-hlen, :].T
 
 
 def apply_deltadelta(energy):
@@ -153,25 +155,22 @@ def apply_deltadelta(energy):
 
     """
     logging.getLogger('prosolia').debug('computing delta-delta')
-    import scipy.signal as sgn
+    from scipy.signal import lfilter
 
-    nframes, nchannels = energy.shape
+    X = energy.T
+
+    nframes, nchannels = X.shape
     hlen = 4
     a = np.r_[hlen:-hlen-1:-1] / 60
 
     hlen2 = 1
     f = np.r_[hlen2:-hlen2-1:-1] / 2
 
-    g = np.r_[np.array([energy[1, :] for x in range(hlen+hlen2)]),
-              energy,
-              np.array([energy[nframes-1, :] for x in range(hlen+hlen2)])]
+    g = np.r_[np.array([X[1, :] for _ in range(hlen+hlen2)]),
+              X,
+              np.array([X[-1, :] for _ in range(hlen+hlen2)])]
 
-    flt1 = sgn.lfilter(a, 1, g.flat)
-    h = flt1.reshape((nframes + 10, nchannels))[8:, :]
-
-    flt2 = sgn.lfilter(f, 1, h.flat)
-    dd = flt2.reshape((nframes + 2, nchannels))
-    return dd[2:, :]
+    return lfilter(f, 1, lfilter(a, 1, g))[hlen+hlen2:-hlen-hlen2, :].T
 
 
 def apply_dct(data, norm=None, size=8):
