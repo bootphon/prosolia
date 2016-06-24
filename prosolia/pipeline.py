@@ -14,6 +14,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Implementation of the prosolia pipeline"""
 
+import logging
 import os
 import shlex
 import shutil
@@ -38,13 +39,19 @@ def load_audio(filename, dtype=np.float64):
     Returns:
     --------
 
-    sample_frequency (int): sample frequency of the audio content in Hz
+    audio (dtype numpy array): data read from file
 
-    data (dtype numpy array): data read from file
+    sample_frequency (int): sample frequency of the audio content in Hz
 
     """
     import soundfile
-    return soundfile.read(filename, dtype=dtype)
+    audio, sample_frequency = soundfile.read(filename, dtype=dtype)
+
+    logging.getLogger('prosolia').debug(
+        'loaded %s: %ss @%sHz',
+        filename, len(audio)/sample_frequency, sample_frequency)
+
+    return audio, sample_frequency
 
 
 def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
@@ -59,8 +66,9 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
     outputs of each band then have their energy integrated over
     windows of ``window_time`` seconds, advancing by ``overlap_time``
     secs for successive columns. The energy is then optionally
-    compressed by log10 or cuboc root. These magnitudes are returned
-    as a nonnegative real matrix with ``nb_channels`` rows.
+    compressed by log10 or cubic root. These magnitudes are returned
+    as a nonnegative real matrix with ``nb_channels`` rows (excepted
+    for log compression where values in dB are negative).
 
     Parameters:
     -----------
@@ -79,7 +87,7 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
 
     compression (string): compression method to use on energy, choose
         None to disable compression, 'log' for 20*np.log10(X) or
-        'cubic' for X**(1/3). Default is None
+        'cubic' for X**(1/3), default is None
 
     Returns:
     --------
@@ -95,21 +103,27 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
     from gammatone.gtgram import gtgram
     from gammatone.filters import erb_space
 
+    logging.getLogger('prosolia').debug(
+        'computing filterbank energy on %s channels, %s compression',
+        nb_channels, compression)
+
+    # get the center frequencies in increasing order
+    center_frequencies = erb_space(low_cf, sample_frequency/2, nb_channels)[::-1]
+
     # get the filterbank output (with increasing frequencies)
     output = np.flipud(gtgram(
         data, sample_frequency, window_time,
         overlap_time, nb_channels, low_cf))
 
-    # get the center frequencies in increasing order
-    center_frequencies = erb_space(low_cf, sample_frequency/2, nb_channels)[::-1]
-
     # compress the output
     compress = {'log': lambda X: 20 * np.log10(X),
                 'cubic': lambda X: X ** (1./3)}
     try:
-        return compress[compression](output), center_frequencies
+        output = compress[compression](output)
     except KeyError:
-        return output, center_frequencies
+        pass
+
+    return output, center_frequencies
 
 
 def apply_dct(data, norm=None, size=8):
@@ -134,18 +148,19 @@ def apply_dct(data, norm=None, size=8):
     Return:
     -------
 
-    dct_output: numpy array of shape (size, data.shape[1])
+    dct: numpy array of shape (size, data.shape[1])
 
     """
-    from scipy.fftpack import dct
-
     if norm is not 'ortho':
         norm = None
 
+    logging.getLogger('prosolia').debug('computing DCT on energy')
+
+    from scipy.fftpack import dct
     return dct(data, type=2, axis=0, norm=norm)[:size, :]
 
 
-def apply_pitch(kaldi_root, wavfile, sample_frequency, verbose=True):
+def apply_pitch(kaldi_root, wavfile, sample_frequency):
     """Apply Kaldi pitch extractor on a wav file
 
     Output is 2-dimensional features consisting of (NCCF, pitch in
@@ -160,6 +175,8 @@ def apply_pitch(kaldi_root, wavfile, sample_frequency, verbose=True):
     RuntimeError if compute-kaldi-pitch-feats failed
 
     """
+    logging.getLogger('prosolia').debug('estimating pitch and POV')
+
     # locate the kaldi executable we want
     kaldi_pitch = os.path.join(
         kaldi_root, 'src', 'featbin', 'compute-kaldi-pitch-feats')
@@ -183,9 +200,10 @@ def apply_pitch(kaldi_root, wavfile, sample_frequency, verbose=True):
         command = (kaldi_pitch + ' --sample-frequency={0} scp:{1} ark,t:{2}'
                    .format(sample_frequency, scp, pitch))
 
-        # execute it in a kaldi environment
-        stderr = None if verbose else open(os.devnull)
-        job = subprocess.Popen(shlex.split(command), cwd=tempdir, stderr=stderr)
+        # execute it in a kaldi environment, ignore kaldi log messages
+        job = subprocess.Popen(
+            shlex.split(command),
+            cwd=tempdir, stderr=open(os.devnull))
         job.wait()
         if job.returncode != 0:
             raise RuntimeError('command "{}" returned with {}'

@@ -17,6 +17,7 @@
 
 import argparse
 import configparser
+import logging
 import os
 import sys
 import scipy.io as sio
@@ -62,7 +63,7 @@ def parse_args(argv=sys.argv[1:]):
         help='display log messages to stdout')
 
     parser.add_argument(
-        '-c', '--config', type=str, required=True,
+        '-c', '--config', type=str, metavar='<file.cfg>', required=True,
         help='configuration file to load')
 
     parser.add_argument(
@@ -70,43 +71,12 @@ def parse_args(argv=sys.argv[1:]):
         help='display the pipeline result in a figure')
 
     parser.add_argument(
-        '-o', '--output', default=None,
+        '-o', '--output', metavar='<file.mat>', default=None,
         help='optional .mat output file')
 
     parser.add_argument(
         'wav', nargs=1,
         help='input wav file')
-
-    # gt_parser = parser.add_argument_group('gammatone filterbank parameters')
-    # gt_parser.add_argument(
-    #     '-n', '--nb-channels',
-    #     type=int, metavar='<int>',
-    #     default=30,
-    #     help='number of frequency channels in the filterbank '
-    #     '(default is %(default)s)')
-    # gt_parser.add_argument(
-    #     '-l', '--low-frequency',
-    #     type=float, metavar='<float>', default=20,
-    #     help='lowest center frequency of the filterbank in Hz '
-    #     '(default is %(default)s Hz)')
-    # en_parser = parser.add_argument_group('energy parameters')
-    # en_parser.add_argument(
-    #     '-w', '--window-time', metavar='<float>', type=float, default=0.08,
-    #     help='integration time of the energy window in seconds, '
-    #     'default is %(default)s s')
-    # en_parser.add_argument(
-    #     '--overlap-time', metavar='<float>', type=float, default=None,
-    #     help='overlap time of two successive windows in seconds, '
-    #     'default is "window-time / 2"')
-    # en_parser.add_argument(
-    #     '--compression', choices=['no', 'cubic', 'log'], default='no',
-    #     help='type of energy compression, "no" disable compression (default), '
-    #     '"cubic" is cubic root and "log" is 20*log10')
-    # pi_parser = parser.add_argument_group('pitch and POV parameters')
-    # pi_parser.add_argument(
-    #     '-k', '--kaldi-root', default='../kaldi',
-    #     help='root directory of the Kaldi distribution, '
-    #     'default is %(default)s')
 
     args = parser.parse_args(argv)
     args.wav = args.wav[0]
@@ -124,10 +94,12 @@ def main(argv=sys.argv[1:]):
     config._interpolation = configparser.ExtendedInterpolation()
     config.read(args.config)
 
-    print(args.config, config.sections())
+    # setup the log
+    log = logging.getLogger('prosolia')
+    log.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    log.addHandler(logging.StreamHandler(sys.stdout))
+
     # load the input audio file
-    if args.verbose:
-        print('reading from {}'.format(args.wav))
     audio, sample_frequency = pipeline.load_audio(args.wav)
 
     # compute filterbank energy
@@ -150,8 +122,7 @@ def main(argv=sys.argv[1:]):
 
     # compute pitch and probability of voicing
     pov, pitch = pipeline.apply_pitch(
-        config['pitch']['kaldi_root'],
-        args.wav, sample_frequency, args.verbose)
+        config['pitch']['kaldi_root'], args.wav, sample_frequency)
 
     # save results
     if args.verbose:
