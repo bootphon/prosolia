@@ -30,6 +30,7 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
 
     """
     fig, (ax0, ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=6)
+
     plot_audio(ax0, audio, sample_frequency)
 
     plot_pitch(ax1, len(audio)/sample_frequency, pov, pitch)
