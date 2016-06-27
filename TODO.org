@@ -1,4 +1,3 @@
 * pitch: more parameters from Kaldi
 * improve plotting by using grids
-* optimize memory usage for long wavs
--> tweak gammatone to eat buffered input
+* change filterbanks to mmmaat:gammatone or simple MEL filterbanks ?

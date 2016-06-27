@@ -55,7 +55,8 @@ def load_audio(filename, dtype=np.float64):
 
 
 def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
-                    window_time=0.5, overlap_time=0.1, compression=None):
+                    window_time=0.5, overlap_time=0.1,
+                    compression=None, accurate=True):
     """Return the response of a gammatone filterbank to data
 
     Calculate a spectrogram-like time frequency magnitude array based
@@ -89,6 +90,10 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         None to disable compression, 'log' for 20*np.log10(X) or
         'cubic' for X**(1/3), default is None
 
+    accurate (bool): use the full filterbank approach instead of the
+        weighted FFT approximation. This is much slower, and uses a
+        lot of memory, but is more accurate. Default is True.
+
     Returns:
     --------
 
@@ -100,15 +105,21 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
         channel in Hz.
 
     """
-    from gammatone.gtgram import gtgram
+    import gammatone.gtgram
+    import gammatone.fftweight
     from gammatone.filters import erb_space
 
+    # choose real gammatones or FFT approximation
+    gtgram = (gammatone.gtgram.gtgram if accurate
+              else gammatone.fftweight.fft_gtgram)
+
     logging.getLogger('prosolia').debug(
-        'computing filterbank energy on %s channels, %s compression',
-        nb_channels, compression)
+        'computing filterbank energy on %s channels, %s compression%s',
+        nb_channels, compression, ', accurate' if accurate else '')
 
     # get the center frequencies in increasing order
-    center_frequencies = erb_space(low_cf, sample_frequency/2, nb_channels)[::-1]
+    center_frequencies = erb_space(
+        low_cf, sample_frequency/2, nb_channels)[::-1]
 
     # get the filterbank output (with increasing frequencies)
     output = np.flipud(gtgram(
@@ -133,17 +144,18 @@ def apply_delta(energy):
 
     """
     logging.getLogger('prosolia').debug('computing delta')
-    import scipy.signal as sgn
+    from scipy.signal import lfilter
 
-    nframes, nchannels = energy.shape
+    X = energy.T
+
+    nframes, nchannels = X.shape
     hlen = 4
     a = np.r_[hlen:-hlen-1:-1] / 60
-    g = np.r_[np.array([energy[1, :] for x in range(hlen)]),
-              energy,
-              np.array([energy[nframes-1, :] for x in range(hlen)])]
-    flt = sgn.lfilter(a, 1, g.flat)
-    d = flt.reshape((nframes + 8, nchannels))
-    return np.array(d[8:, :])
+    g = np.r_[np.array([X[1, :] for _ in range(hlen)]),
+              X,
+              np.array([X[-1, :] for _ in range(hlen)])]
+
+    return lfilter(a, 1, g)[hlen:-hlen, :].T
 
 
 def apply_deltadelta(energy):
@@ -153,28 +165,25 @@ def apply_deltadelta(energy):
 
     """
     logging.getLogger('prosolia').debug('computing delta-delta')
-    import scipy.signal as sgn
+    from scipy.signal import lfilter
 
-    nframes, nchannels = energy.shape
+    X = energy.T
+
+    nframes, nchannels = X.shape
     hlen = 4
     a = np.r_[hlen:-hlen-1:-1] / 60
 
     hlen2 = 1
     f = np.r_[hlen2:-hlen2-1:-1] / 2
 
-    g = np.r_[np.array([energy[1, :] for x in range(hlen+hlen2)]),
-              energy,
-              np.array([energy[nframes-1, :] for x in range(hlen+hlen2)])]
+    g = np.r_[np.array([X[1, :] for _ in range(hlen+hlen2)]),
+              X,
+              np.array([X[-1, :] for _ in range(hlen+hlen2)])]
 
-    flt1 = sgn.lfilter(a, 1, g.flat)
-    h = flt1.reshape((nframes + 10, nchannels))[8:, :]
-
-    flt2 = sgn.lfilter(f, 1, h.flat)
-    dd = flt2.reshape((nframes + 2, nchannels))
-    return dd[2:, :]
+    return lfilter(f, 1, lfilter(a, 1, g))[hlen+hlen2:-hlen-hlen2, :].T
 
 
-def apply_dct(data, norm=None, size=8):
+def apply_dct(data, norm=False, size=8):
     """Return the `size` first coefficients of the `data` DCT
 
     Apply type 2 discrete cosine transfrom on the first axis of `data`
@@ -187,9 +196,8 @@ def apply_dct(data, norm=None, size=8):
     data (2D numpy array): input array, first axis is frequency,
         second axis is time
 
-    norm: if 'ortho', normalize the dct such that makes the
-        corresponding matrix of coefficients orthonormal, default is
-        None
+    norm: if True, normalize the dct such that makes the corresponding
+        matrix of coefficients orthonormal, default is False
 
     size (int): keep the `size` first coefficients of the dct output
 
@@ -199,13 +207,13 @@ def apply_dct(data, norm=None, size=8):
     dct: numpy array of shape (size, data.shape[1])
 
     """
-    if norm is not 'ortho':
-        norm = None
-
     logging.getLogger('prosolia').debug('computing DCT')
 
     from scipy.fftpack import dct
-    return dct(data, type=2, axis=0, norm=norm)[:size, :]
+    return dct(
+        data, type=2, axis=0,
+        norm='ortho' if norm is True else None
+    )[:size, :]
 
 
 def apply_pitch(kaldi_root, wavfile, sample_frequency):

@@ -51,12 +51,36 @@ class CatchExceptions(object):
             self._exit('keyboard interruption, exiting')
 
 
+def str2bool(s, safe=False):
+    """Return True if s=='true', False if s=='false'
+
+    If s is already a bool return it, else raise TypeError.
+    If `safe` is True, never raise but return False instead.
+
+    From abkhazia.utils
+
+    """
+    if isinstance(s, bool):
+        return s
+
+    s = s.lower()
+
+    if safe:
+        return True if s == 'true' else False
+    else:
+        if s == 'true':
+            return True
+        if s == 'false':
+            return False
+    raise TypeError("{} must be 'true' or 'false'".format(s))
+
+
 def parse_args(argv=sys.argv[1:]):
     """Return parsed arguments from command-line"""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='Extract pitch, probability of voicing and '
-        'frequency-band energy modulation from a wav file')
+        'filterbank energy modulation from a wav file')
 
     parser.add_argument(
         '-v', '--verbose', action='store_true',
@@ -72,7 +96,7 @@ def parse_args(argv=sys.argv[1:]):
 
     parser.add_argument(
         '-o', '--output', metavar='<file.mat>', default=None,
-        help='optional .mat output file')
+        help='output file in Matlab format, default is <wav>.mat')
 
     parser.add_argument(
         'wav', nargs=1,
@@ -109,7 +133,8 @@ def main(argv=sys.argv[1:]):
         low_cf=config.getfloat('filterbank', 'low_frequency'),
         window_time=config.getfloat('energy', 'window_time'),
         overlap_time=eval(config.get('energy', 'overlap_time')),
-        compression=config.get('energy', 'compression'))
+        compression=config.get('energy', 'compression'),
+        accurate=str2bool(config.get('filterbank', 'accurate')))
 
     # compute delta and delta-delta from energy
     delta = pipeline.apply_delta(energy)
@@ -118,7 +143,7 @@ def main(argv=sys.argv[1:]):
     # compute DCT on energy
     dct = pipeline.apply_dct(
         energy,
-        norm=config.get('dct', 'normalize'),
+        norm=str2bool(config.get('dct', 'normalize')),
         size=config.getint('dct', 'size'))
 
     # compute pitch and probability of voicing
