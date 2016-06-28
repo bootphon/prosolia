@@ -148,7 +148,11 @@ def main(argv=sys.argv[1:]):
 
     # compute pitch and probability of voicing
     pov, pitch = pipeline.apply_pitch(
-        config['pitch']['kaldi_root'], args.wav, sample_frequency)
+        config['pitch']['kaldi_root'],
+        args.wav, sample_frequency,
+        eval(config.get('pitch', 'frame_length')),
+        eval(config.get('pitch', 'frame_shift')),
+        config.get('pitch', 'options'))
 
     # save results
     log.info('saving to %s', args.output)
@@ -170,6 +174,7 @@ def main(argv=sys.argv[1:]):
             sample_frequency,
             config.getfloat('filterbank', 'low_frequency'),
             audio, energy, delta, delta_delta, dct, pov, pitch)
+
 
 if __name__ == '__main__':
     main()

@@ -29,7 +29,8 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
     (plot 4).
 
     """
-    fig, (ax0, ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=6)
+    fig, (ax0, ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=6, sharex=True)
+    fig.subplots_adjust(wspace=0, hspace=0)
 
     plot_audio(ax0, audio, sample_frequency)
 
@@ -37,18 +38,19 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
 
     plot_filterbank(
         fig, ax2, sample_frequency, low_frequency,
-        len(audio)/sample_frequency, energy)
+        len(audio)/sample_frequency, energy, label='energy')
 
     plot_filterbank(
         fig, ax3, sample_frequency, low_frequency,
-        len(audio)/sample_frequency, delta)
+        len(audio)/sample_frequency, delta, label='delta')
 
     plot_filterbank(
         fig, ax4, sample_frequency, low_frequency,
-        len(audio)/sample_frequency, delta_delta)
+        len(audio)/sample_frequency, delta_delta, label='delta delta')
 
     plot_dct(fig, ax5, len(audio)/sample_frequency, dct_output)
 
+    ax5.set_xlabel('time (s)')
     fig.tight_layout()
     plt.show()
 
@@ -56,11 +58,8 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
 def plot_audio(axes, data, sample_frequency):
     """Plot the audio signal"""
     time = np.linspace(0, len(data)/sample_frequency, num=len(data))
-
-    axes.set_xlabel('time (s)')
     axes.set_ylabel('amplitude')
     axes.set_xlim([0, time[-1]])
-
     axes.plot(time, data)
 
 
@@ -78,7 +77,6 @@ def plot_pitch(axes, duration, pov, pitch):
     # round max pitch to the upper hundredth for nice plotting
     par1.set_ylim(0, int(math.ceil(pitch.max() / 100.0)) * 100)
 
-    axes.set_xlabel("time (s)")
     axes.set_ylabel("NFCC")
     par1.set_ylabel("pitch (Hz)")
     axes.yaxis.label.set_color(p1.get_color())
@@ -89,7 +87,8 @@ def plot_pitch(axes, duration, pov, pitch):
     par1.tick_params(axis='y', colors=p2.get_color(), **tkw)
 
 
-def plot_filterbank(fig, axes, sample_frequency, low_cf, duration, data):
+def plot_filterbank(fig, axes, sample_frequency, low_cf, duration,
+                    data, label=''):
     """Plot the filterbank output as an image with colorbar"""
     # Set a nice formatter for the y-axis
     from gammatone.plot import ERBFormatter
@@ -97,9 +96,8 @@ def plot_filterbank(fig, axes, sample_frequency, low_cf, duration, data):
     axes.yaxis.set_major_formatter(formatter)
 
     img = axes.imshow(data, extent=[0, duration, 1, 0], aspect='auto')
-    axes.set_xlabel('time (s)')
-    axes.set_ylabel('frequency')
-    fig.colorbar(img, ax=axes)
+    axes.set_ylabel('frequency' if not label else label)
+    # fig.colorbar(img, ax=axes)
 
 
 def plot_dct(fig, axes, duration, data):
@@ -107,9 +105,8 @@ def plot_dct(fig, axes, duration, data):
     # n as in pipeline.apply_dct
     n = data.shape[0]
 
-    axes.set_xlabel("time (s)")
-    axes.set_ylabel("DCT coefs")
+    axes.set_ylabel("DCT")
     axes.set_yticks(range(n, 0, -1))
     img = axes.imshow(data, extent=[0, duration, 0, n], aspect='auto',
                       origin='lower', interpolation='nearest')
-    fig.colorbar(img, ax=axes)
+    # fig.colorbar(img, ax=axes)
