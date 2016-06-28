@@ -3,21 +3,39 @@
 **speech features extraction pipeline for prosody analysis**
 
 ``` text
-                                  +--->  delta
-                                  |
-wav +---> filterbank +---> energy +--->  delta-delta
-    |                             |
-    |                             +--->  DCT
-    |
-    +---> pitch, probability of voicing
-
+                                  +--->  delta           +
+                                  |                      |
+wav +---> filterbank +---> energy +--->  delta-delta     |
+    |                             |                      +---> .mat file
+    |                             +--->  DCT             |
+    |                                                    |
+    +---> pitch, probability of voicing                  |
+                                                         +
 ```
+
+* wav file as input, Matlab mat file as output
+
+* gammatone filterbank
+
+* compressed energy (cubic root or log)
+
+* delta, delta-delta and dicrete cosine transform computed on energy
+
+* pitch estimation and probability of voicing (from
+  [Kaldi](http://kaldi-asr.org))
+
 
 ## Usage
 
-Once installed, prosolia is available as a command-line tool. To get
-in, simply have a `prosolia --help`.
+Once installed, prosolia is available as a command-line tool. Pipeline
+parameters are read from a configuration file. To get in, simply have
+a `prosolia --help`.
 
+For exemple:
+
+``` shell
+prosolia -c ./prosolia.cfg ./some_speech.wav -o some_features.mat
+```
 
 ## Installation
 
