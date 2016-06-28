@@ -1,3 +1,0 @@
-* pitch: more parameters from Kaldi
-* improve plotting by using grids
-* change filterbanks to mmmaat:gammatone or simple MEL filterbanks ?

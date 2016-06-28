@@ -138,9 +138,19 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
 
 
 def apply_delta(energy):
-    """Compute delta from enregy features
+    """Compute delta features from energy
 
     From https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
+
+    Parameters:
+    -----------
+
+    energy (2D numpy array): input time/frequency matrix
+
+    Returns:
+    --------
+
+    delta: a numpy array such as delta.shape == energy.shape
 
     """
     logging.getLogger('prosolia').debug('computing delta')
@@ -155,7 +165,7 @@ def apply_delta(energy):
               X,
               np.array([X[-1, :] for _ in range(hlen)])]
 
-    return lfilter(a, 1, g)[hlen:-hlen, :].T
+    return lfilter(a, 1, g, axis=0)[hlen:-hlen, :].T
 
 
 def apply_deltadelta(energy):
@@ -180,7 +190,8 @@ def apply_deltadelta(energy):
               X,
               np.array([X[-1, :] for _ in range(hlen+hlen2)])]
 
-    return lfilter(f, 1, lfilter(a, 1, g))[hlen+hlen2:-hlen-hlen2, :].T
+    return lfilter(f, 1, lfilter(a, 1, g, axis=0),
+                   axis=0)[hlen+hlen2:-hlen-hlen2, :].T
 
 
 def apply_dct(data, norm=False, size=8):
@@ -216,11 +227,81 @@ def apply_dct(data, norm=False, size=8):
     )[:size, :]
 
 
-def apply_pitch(kaldi_root, wavfile, sample_frequency):
+def apply_pitch(kaldi_root, wavfile, sample_frequency,
+                frame_length=25, frame_shift=10, options=''):
     """Apply Kaldi pitch extractor on a wav file
 
     Output is 2-dimensional features consisting of (NCCF, pitch in
     Hz), where NCCF is between -1 and 1, and higher for voiced frames.
+
+    Parameters:
+    -----------
+
+    kaldi_root (str): path to the root directory of a compiled Kaldi
+        distribution. Looks for and executes
+        'kaldi_root'/src/featbin/compute-kaldi-pitch-feats
+
+    wavfile (str): path to the wav file to be analyzed
+
+    sample_frequency (int): sampling rate of the input wav file
+
+    frame-length (float): frame length in milliseconds, default is 25
+
+    frame-shift (float): frame shift in milliseconds, default is 10
+
+    options (str): optional parameters to compute-kaldi-pitch-feats
+
+
+    Options:
+    --------
+
+    The following options must be concatened in the `options` string
+    as "--key=value" pairs separated by spaces.
+
+    --delta-pitch : Smallest relative change in pitch that our
+      algorithm measures (float, default = 0.005)
+
+    --frames-per-chunk : Only relevant for offline pitch extraction
+      (e.g. compute-kaldi-pitch-feats), you can set it to a small
+      nonzero value, such as 10, for better feature compatibility with
+      online decoding (affects energy normalization in the algorithm)
+      (int, default = 0)
+
+    --lowpass-cutoff : cutoff frequency for LowPass filter (Hz)
+      (float, default = 1000)
+
+    --lowpass-filter-width : Integer that determines filter width of
+      lowpass filter, more gives sharper filter (int, default = 1)
+
+    --max-f0 : max. F0 to search for (Hz) (float, default = 400)
+
+    --max-frames-latency : Maximum number of frames of latency that we
+      allow pitch tracking to introduce into the feature processing
+      (affects output only if --frames-per-chunk > 0 and
+      --simulate-first-pass-online=true (int, default = 0)
+
+    --min-f0 : min. F0 to search for (Hz) (float, default = 50)
+
+    --nccf-ballast : Increasing this factor reduces NCCF for quiet
+      frames (float, default = 7000)
+
+    --penalty-factor : cost factor for FO change. (float, default =
+      0.1)
+
+    --resample-frequency : Frequency that we down-sample the signal to.
+      Must be more than twice lowpass-cutoff (float, default = 4000)
+
+    --snip-edges : If this is set to false, the incomplete frames near
+      the ending edge won't be snipped, so that the number of frames
+      is the file size divided by the frame-shift. This makes
+      different types of features give the same number of
+      frames. (bool, default = true)
+
+    --soft-min-f0 : Minimum f0, applied in soft way, must not exceed
+      min-f0 (float, default = 10)
+
+    --upsample-filter-width : Integer that determines filter width
+      when upsampling NCCF (int, default = 5)
 
     Raise:
     ------
@@ -253,8 +334,11 @@ def apply_pitch(kaldi_root, wavfile, sample_frequency):
         pitch = os.path.join(tempdir, 'pitch.txt')
 
         # the kaldi command to execute
-        command = (kaldi_pitch + ' --sample-frequency={0} scp:{1} ark,t:{2}'
-                   .format(sample_frequency, scp, pitch))
+        command = (
+            kaldi_pitch + ' --sample-frequency={0} --frame-length={1} '
+            '--frame-shift={2} {3} scp:{4} ark,t:{5}'
+            .format(sample_frequency, frame_length, frame_shift,
+                    options, scp, pitch))
 
         # execute it in a kaldi environment, ignore kaldi log messages
         job = subprocess.Popen(
