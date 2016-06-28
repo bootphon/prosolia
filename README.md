@@ -2,12 +2,42 @@
 
 **speech features extraction pipeline for prosody analysis**
 
+``` text
+                                  +--->  delta
+                                  |
+wav +---> filterbank +---> energy +--->  delta-delta
+    |                             |
+    |                             +--->  DCT
+    |
+    +---> pitch, probability of voicing
+
+```
+
 ## Usage
 
 Once installed, prosolia is available as a command-line tool. To get
 in, simply have a `prosolia --help`.
 
+
 ## Installation
+
+* On Windows, we recommend to install and use prosolia in a
+  [CygWin](https://cygwin.com) environment, because Kaldi is better
+  supported there.
+
+* Install Kaldi by following the instructions from
+  [here](http://kaldi-asr.org/doc/install.html). Basically, you have
+  to do (from the `kaldi` directory):
+
+``` shell
+cd tools
+./extras/check_dependancies.sh
+make -j 4  # -j N do a parallel build on N CPUs
+cd ../src
+./configure
+make depend -j 4
+make -j 4
+```
 
 * Using the [Anaconda](http://continuum.io/downloads) distribution of
   Python 3 (conda is also available independently of Anaconda with
@@ -23,20 +53,6 @@ python setup.py install
   OS X, it is installed automatically. On Linux, you need to install
   libsndfile using your distribution's package manager, for example
   `sudo apt-get install libsndfile1`.
-
-* Install Kaldi by following the instructions from
-  [here](http://kaldi-asr.org/doc/install.html). Basically, you have
-  to do (from the `kaldi` directory):
-
-``` shell
-cd tools
-./extras/check_dependancies.sh
-make -j 4  # -j N do a parallel build on N CPUs
-cd ../src
-./configure
-make depend -j 4
-make -j 4
-```
 
 ## Licence
 
