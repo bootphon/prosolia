@@ -9,13 +9,13 @@ wav +---> filterbank +---> energy +--->  delta-delta     |
     |                             |                      +---> .mat file
     |                             +--->  DCT             |
     |                                                    |
-    +---> pitch, probability of voicing                  |
-                                                         +
+    +---> pitch, probability of voicing                  +
 ```
 
 * wav file as input, Matlab mat file as output
 
-* gammatone filterbank
+* gammatone filterbank (from the
+  [Gammatone Filterbank Toolkit](https://github.com/detly/gammatone))
 
 * compressed energy (cubic root or log)
 
@@ -34,7 +34,7 @@ a `prosolia --help`.
 For exemple:
 
 ``` shell
-prosolia -c ./prosolia.cfg ./some_speech.wav -o some_features.mat
+prosolia ./some_speech.wav -c ./prosolia.cfg -o some_features.mat
 ```
 
 ## Installation

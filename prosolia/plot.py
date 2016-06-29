@@ -77,7 +77,7 @@ def plot_pitch(axes, duration, pov, pitch):
     # round max pitch to the upper hundredth for nice plotting
     par1.set_ylim(0, int(math.ceil(pitch.max() / 100.0)) * 100)
 
-    axes.set_ylabel("NFCC")
+    axes.set_ylabel("NCCF")
     par1.set_ylabel("pitch (Hz)")
     axes.yaxis.label.set_color(p1.get_color())
     par1.yaxis.label.set_color(p2.get_color())
