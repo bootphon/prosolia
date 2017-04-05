@@ -20,8 +20,7 @@ import numpy as np
 
 
 def plot_pipeline(sample_frequency, low_frequency, audio,
-                  energy, delta, delta_delta,
-                  dct_output, pov, pitch):
+                  spectrogram, dct_output, pov, pitch):
     """Plot the whole prosalia output as 4 subplots
 
     Displays audio signal (plot 1), probability of voicing and pitch
@@ -38,15 +37,15 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
 
     plot_filterbank(
         fig, ax2, sample_frequency, low_frequency,
-        len(audio)/sample_frequency, energy, label='energy')
+        len(audio)/sample_frequency, spectrogram['raw'], label='spectrogram')
 
     plot_filterbank(
         fig, ax3, sample_frequency, low_frequency,
-        len(audio)/sample_frequency, delta, label='delta')
+        len(audio)/sample_frequency, spectrogram['delta'], label='delta')
 
     plot_filterbank(
         fig, ax4, sample_frequency, low_frequency,
-        len(audio)/sample_frequency, delta_delta, label='delta delta')
+        len(audio)/sample_frequency, spectrogram['delta_delta'], label='delta delta')
 
     plot_dct(fig, ax5, len(audio)/sample_frequency, dct_output)
 
@@ -69,13 +68,15 @@ def plot_pitch(axes, duration, pov, pitch):
 
     par1 = axes.twinx()
     p1, = axes.plot(time, pov, 'b', label="NCCF")
-    p2, = par1.plot(time, pitch, 'r', label="pitch (Hz)")
+    p2, = par1.plot(time, pitch['raw'], 'r', ls='-', label="pitch (Hz)")
+    # p3, = par1.plot(time, pitch['delta'] * 10, 'r', ls='--', label="pitch delta")
+    # p4, = par1.plot(time, pitch['delta_delta'] * 100, 'r', ls='-.', label="pitch delta-delta")
 
     axes.set_xlim(0, duration)
     axes.set_ylim(-1, 1)
 
     # round max pitch to the upper hundredth for nice plotting
-    par1.set_ylim(0, int(math.ceil(pitch.max() / 100.0)) * 100)
+    par1.set_ylim(0, int(math.ceil(pitch['raw'].max() / 100.0)) * 100)
 
     axes.set_ylabel("NCCF")
     par1.set_ylabel("pitch (Hz)")

@@ -143,8 +143,8 @@ def main(argv=sys.argv[1:]):
     audio, sample_frequency = pipeline.load_audio(
         args.wav, args.tstart, args.tstop)
 
-    # compute filterbank energy
-    energy, center_frequencies = pipeline.apply_gammatone(
+    # compute the spectrogram from gammatone filters
+    spectrogram, center_frequencies = pipeline.apply_gammatone(
         audio, sample_frequency,
         nb_channels=config.getint('filterbank', 'nb_channels'),
         low_cf=config.getfloat('filterbank', 'low_frequency'),
@@ -153,13 +153,13 @@ def main(argv=sys.argv[1:]):
         compression=config.get('energy', 'compression'),
         accurate=str2bool(config.get('filterbank', 'accurate')))
 
-    # compute delta and delta-delta from energy
-    delta = pipeline.apply_delta(energy)
-    delta_delta = pipeline.apply_deltadelta(energy)
+    # compute delta and delta-delta on spectrogram
+    delta = pipeline.apply_delta(spectrogram)
+    delta_delta = pipeline.apply_deltadelta(spectrogram)
 
-    # compute DCT on energy
+    # compute DCT on spectrogram
     dct = pipeline.apply_dct(
-        energy,
+        spectrogram,
         norm=str2bool(config.get('dct', 'normalize')),
         size=config.getint('dct', 'size'))
 
@@ -171,6 +171,13 @@ def main(argv=sys.argv[1:]):
         eval(config.get('pitch', 'frame_shift')),
         config.get('pitch', 'options'))
 
+    # compute delta and delta-delta on pitch as well
+    pitch_d = pipeline.apply_delta(pitch)
+    pitch_dd = pipeline.apply_deltadelta(pitch)
+
+    pitch = {'raw': pitch, 'delta': pitch_d, 'delta_delta': pitch_dd}
+    spectrogram = {'raw': spectrogram, 'delta': delta, 'delta_delta': delta_delta}
+
     # save results
     log.info('saving to %s', args.output)
     sio.savemat(args.output, {
@@ -178,19 +185,16 @@ def main(argv=sys.argv[1:]):
         'config': config,
         'sample_frequency': sample_frequency,
         'center_frequencies': center_frequencies,
-        'energy': energy,
-        'delta': delta,
-        'delta_delta': delta_delta,
-        'dct': dct,
+        'spectrogram': spectrogram,
         'pitch': pitch,
+        'dct': dct,
         'pov': pov})
 
     # plot results
     if args.plot:
         plot.plot_pipeline(
-            sample_frequency,
-            config.getfloat('filterbank', 'low_frequency'),
-            audio, energy, delta, delta_delta, dct, pov, pitch)
+            sample_frequency, config.getfloat('filterbank', 'low_frequency'),
+            audio, spectrogram, dct, pov, pitch)
 
 
 if __name__ == '__main__':

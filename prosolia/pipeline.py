@@ -58,7 +58,6 @@ def load_audio(filename, tstart=None, tstop=None, dtype=np.float64):
         start=math.floor(tstart * sample_frequency) if tstart else 0,
         stop=math.floor(tstop * sample_frequency) if tstop else None)
 
-    print(len(audio))
     logging.getLogger('prosolia').debug(
         'loaded %s: %ss @ %sHz',
         filename, len(audio)/sample_frequency, sample_frequency)
@@ -153,39 +152,39 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
     return output, center_frequencies
 
 
-def apply_delta(energy):
-    """Compute delta features from energy
+def apply_delta(array):
+    """Compute delta features on a 2D array
 
     From https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
 
     Parameters:
     -----------
 
-    energy (2D numpy array): input time/frequency matrix
+    array (2D numpy array): input time/frequency matrix
 
     Returns:
     --------
 
-    delta: a numpy array such as delta.shape == energy.shape
+    delta: a numpy array such as delta.shape == array.shape
 
     """
     logging.getLogger('prosolia').debug('computing delta')
     from scipy.signal import lfilter
 
-    X = energy.T
-
-    nframes, nchannels = X.shape
+    X = array.T if array.ndim > 1 else array
     hlen = 4
     a = np.r_[hlen:-hlen-1:-1] / 60
-    g = np.r_[np.array([X[1, :] for _ in range(hlen)]),
+    g = np.r_[np.array([X[1, :] if X.ndim > 1 else X[1] for _ in range(hlen)]),
               X,
-              np.array([X[-1, :] for _ in range(hlen)])]
+              np.array([X[-1, :] if X.ndim > 1 else X[-1] for _ in range(hlen)])]
 
-    return lfilter(a, 1, g, axis=0)[hlen:-hlen, :].T
+    res = (lfilter(a, 1, g, axis=0)[hlen:-hlen, :].T if X.ndim > 1 else
+           lfilter(a, 1, g, axis=0)[hlen:-hlen])
+    return res
 
 
-def apply_deltadelta(energy):
-    """Compute delta-delta from energy features
+def apply_deltadelta(array):
+    """Compute delta-delta on a 2D array
 
     From https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
 
@@ -193,25 +192,27 @@ def apply_deltadelta(energy):
     logging.getLogger('prosolia').debug('computing delta-delta')
     from scipy.signal import lfilter
 
-    X = energy.T
-
-    nframes, nchannels = X.shape
+    X = array.T if array.ndim > 1 else array
     hlen = 4
     a = np.r_[hlen:-hlen-1:-1] / 60
 
     hlen2 = 1
     f = np.r_[hlen2:-hlen2-1:-1] / 2
 
-    g = np.r_[np.array([X[1, :] for _ in range(hlen+hlen2)]),
+    g = np.r_[np.array([X[1, :] if X.ndim > 1 else X[1] for _ in range(hlen+hlen2)]),
               X,
-              np.array([X[-1, :] for _ in range(hlen+hlen2)])]
+              np.array([X[-1, :] if X.ndim > 1 else X[-1] for _ in range(hlen+hlen2)])]
 
-    return lfilter(f, 1, lfilter(a, 1, g, axis=0),
-                   axis=0)[hlen+hlen2:-hlen-hlen2, :].T
+    return (
+        lfilter(f, 1, lfilter(
+            a, 1, g, axis=0), axis=0)[hlen+hlen2:-hlen-hlen2, :].T
+        if X.ndim > 1 else
+        lfilter(f, 1, lfilter(
+            a, 1, g, axis=0), axis=0)[hlen+hlen2:-hlen-hlen2])
 
 
-def apply_dct(data, norm=False, size=8):
-    """Return the `size` first coefficients of the `data` DCT
+def apply_dct(array, norm=False, size=8):
+    """Return the `size` first coefficients of the `array` DCT
 
     Apply type 2 discrete cosine transfrom on the first axis of `data`
     (frequencies) over the second axis (time). Wrapper on
@@ -220,7 +221,7 @@ def apply_dct(data, norm=False, size=8):
     Parameters:
     -----------
 
-    data (2D numpy array): input array, first axis is frequency,
+    array (2D numpy array): input array, first axis is frequency,
         second axis is time
 
     norm: if True, normalize the dct such that makes the corresponding
@@ -238,7 +239,7 @@ def apply_dct(data, norm=False, size=8):
 
     from scipy.fftpack import dct
     return dct(
-        data, type=2, axis=0,
+        array, type=2, axis=0,
         norm='ortho' if norm is True else None
     )[:size, :]
 
@@ -247,7 +248,7 @@ def apply_pitch(kaldi_root, wavfile, sample_frequency,
                 frame_length=25, frame_shift=10, options=''):
     """Apply Kaldi pitch extractor on a wav file
 
-    Output is 2-dimensional features consisting of (NCCF, pitch in
+    Output is 2-dimensional numpy array consisting of (NCCF, pitch in
     Hz), where NCCF is between -1 and 1, and higher for voiced frames.
 
     Parameters:
