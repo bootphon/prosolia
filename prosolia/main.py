@@ -22,9 +22,15 @@ import os
 import sys
 import scipy.io as sio
 
-import prosolia.pipeline as pipeline
+# change the graphic backend in case of no attached display
+try:
+    import prosolia.plot as plot
+except ModuleNotFoundError: # PyQT
+    import matplotlib
+    matplotlib.use('pdf')
+    
 import prosolia.plot as plot
-
+import prosolia.pipeline as pipeline
 
 class CatchExceptions(object):
     """A decorator wrapping 'function' in a try/except block
