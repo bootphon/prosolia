@@ -44,8 +44,14 @@ prosolia ./some_speech.wav -c ./prosolia.cfg -o some_features.mat
   supported there.
 
 * Install Kaldi by following the instructions from
-  [here](http://kaldi-asr.org/doc/install.html). Basically, you have
-  to do (from the `kaldi` directory):
+  [here](http://kaldi-asr.org/doc/install.html). Note that you don't
+  need the whole Kaldi system but only the
+  [compute-kaldi-pitch-feats](
+  https://github.com/kaldi-asr/kaldi/blob/master/src/featbin/compute-kaldi-pitch-feats.cc)
+  program.
+
+  To compile only the required subpart of Kaldi (the `featbin`
+  sources), you have to do (from the `kaldi` directory):
 
 ``` shell
 cd tools
@@ -54,8 +60,9 @@ make -j 4  # -j N do a parallel build on N CPUs
 cd ../src
 ./configure
 make depend -j 4
-make -j 4
+make featbin -j 4  # use "make -j 4" to compile the entire Kaldi
 ```
+
 * Prosalia relies on the system library `libsndfile`. On Windows and
   OS X, it is installed automatically. On Linux, you need to install
   libsndfile using your distribution's package manager, for example
