@@ -3,23 +3,23 @@
 **speech features extraction pipeline for prosody analysis**
 
 ``` text
-                                  +--->  delta           +
-                                  |                      |
-wav +---> filterbank +---> energy +--->  delta-delta     |
-    |                             |                      +---> .mat file
-    |                             +--->  DCT             |
-    |                                                    |
-    +---> pitch, probability of voicing                  +
+                                       +--->  delta        +
+                                       |                   |
+wav +---> filterbank +---> compression +--->  delta-delta  |
+    |                                  |                   +---> .mat file
+    |                                  +--->  DCT          |
+    |                                                      |
+    +---> pitch (with deltas), probability of voicing      +
 ```
 
 * wav file as input, Matlab mat file as output
 
-* gammatone filterbank (from the
+* gammatone filterbank (spectrogram-like from the
   [Gammatone Filterbank Toolkit](https://github.com/detly/gammatone))
 
-* compressed energy (cubic root or log)
+* compressed spectrogram (cubic root or log)
 
-* delta, delta-delta and dicrete cosine transform computed on energy
+* delta, delta-delta and dicrete cosine transform computed on spectrogram
 
 * pitch estimation and probability of voicing (from
   [Kaldi](http://kaldi-asr.org))
@@ -56,21 +56,19 @@ cd ../src
 make depend -j 4
 make -j 4
 ```
+* Prosalia relies on the system library `libsndfile`. On Windows and
+  OS X, it is installed automatically. On Linux, you need to install
+  libsndfile using your distribution's package manager, for example
+  `sudo apt-get install libsndfile1`.
 
 * Using the [Anaconda](http://continuum.io/downloads) distribution of
   Python 3 (conda is also available independently of Anaconda with
   `pip install conda; conda init`):
 
 ``` shell
-conda install cffi numpy scipy matplotlib
-python setup.py build
+conda install python=3.6 cffi numpy scipy matplotlib
 python setup.py install
 ```
-
-* Prosalia relies on the system library `libsndfile`. On Windows and
-  OS X, it is installed automatically. On Linux, you need to install
-  libsndfile using your distribution's package manager, for example
-  `sudo apt-get install libsndfile1`.
 
 ## Licence
 

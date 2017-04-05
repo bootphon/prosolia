@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError: # PyQT
     import matplotlib
     matplotlib.use('pdf')
-    
+
 import prosolia.plot as plot
 import prosolia.pipeline as pipeline
 
@@ -93,16 +93,26 @@ def parse_args(argv=sys.argv[1:]):
         help='display log messages to stdout')
 
     parser.add_argument(
-        '-c', '--config', type=str, metavar='<file.cfg>', required=True,
-        help='configuration file to load')
-
-    parser.add_argument(
         '-p', '--plot', action='store_true',
         help='display the pipeline result in a figure')
 
     parser.add_argument(
         '-o', '--output', metavar='<file.mat>', default=None,
         help='output file in Matlab format, default is <wav>.mat')
+
+    parser.add_argument(
+        '--tstart', metavar='<float>', default=None, type=float,
+        help='start time (in s.) from where to read the wav file, '
+        'if not specified read from the begining')
+
+    parser.add_argument(
+        '--tstop', metavar='<float>', default=None, type=float,
+        help='stop time (in s.) from where to stop reading the wav file, '
+        'if not specified read up to the end')
+
+    parser.add_argument(
+        '-c', '--config', type=str, metavar='<file.cfg>', required=True,
+        help='configuration file to load')
 
     parser.add_argument(
         'wav', nargs=1,
@@ -130,7 +140,8 @@ def main(argv=sys.argv[1:]):
     log.addHandler(logging.StreamHandler(sys.stdout))
 
     # load the input audio file
-    audio, sample_frequency = pipeline.load_audio(args.wav)
+    audio, sample_frequency = pipeline.load_audio(
+        args.wav, args.tstart, args.tstop)
 
     # compute filterbank energy
     energy, center_frequencies = pipeline.apply_gammatone(

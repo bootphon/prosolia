@@ -15,6 +15,7 @@
 """Implementation of the prosolia pipeline"""
 
 import logging
+import math
 import os
 import shlex
 import shutil
@@ -24,7 +25,7 @@ import tempfile
 import numpy as np
 
 
-def load_audio(filename, dtype=np.float64):
+def load_audio(filename, tstart=None, tstop=None, dtype=np.float64):
     """Return audio data from a file
 
     The wav file is assumed to be mono.
@@ -33,6 +34,12 @@ def load_audio(filename, dtype=np.float64):
     -----------
 
     filename (string or openfile handle): input audio file
+
+    tstart (float): begin time of the audio chunk to load (in s.),
+      None to begin from start.
+
+    tstop (floet): end time of the audio chunk to load (in s.), None to
+      load up to the en dof the file.
 
     dtype: output scalar type (default is numpy.float64)
 
@@ -45,10 +52,15 @@ def load_audio(filename, dtype=np.float64):
 
     """
     import soundfile
-    audio, sample_frequency = soundfile.read(filename, dtype=dtype)
+    sample_frequency = soundfile.info(filename).samplerate
+    audio, _ = soundfile.read(
+        filename, dtype=dtype,
+        start=math.floor(tstart * sample_frequency) if tstart else 0,
+        stop=math.floor(tstop * sample_frequency) if tstop else None)
 
+    print(len(audio))
     logging.getLogger('prosolia').debug(
-        'loaded %s: %ss @%sHz',
+        'loaded %s: %ss @ %sHz',
         filename, len(audio)/sample_frequency, sample_frequency)
 
     return audio, sample_frequency
@@ -123,8 +135,12 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
 
     # get the filterbank output (with increasing frequencies)
     output = np.flipud(gtgram(
-        data, sample_frequency, window_time,
-        overlap_time, nb_channels, low_cf))
+        data,
+        sample_frequency,
+        window_time,
+        overlap_time,
+        nb_channels,
+        low_cf))
 
     # compress the output
     compress = {'log': lambda X: 20 * np.log10(X),
@@ -169,7 +185,7 @@ def apply_delta(energy):
 
 
 def apply_deltadelta(energy):
-    """Compute delta-delta from enregy features
+    """Compute delta-delta from energy features
 
     From https://github.com/bootphon/spectral/blob/master/spectral/_spectral.py
 
