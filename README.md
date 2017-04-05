@@ -49,7 +49,7 @@ prosolia ./some_speech.wav -c ./prosolia.cfg -o some_features.mat
 
 ``` shell
 cd tools
-./extras/check_dependancies.sh
+./extras/check_dependencies.sh
 make -j 4  # -j N do a parallel build on N CPUs
 cd ../src
 ./configure
