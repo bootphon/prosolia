@@ -93,11 +93,13 @@ def parse_args(argv=sys.argv[1:]):
         help='display log messages to stdout')
 
     parser.add_argument(
-        '-p', '--plot', action='store_true',
-        help='display the pipeline result in a figure')
+        '-p', '--plot', metavar='<image_file>', nargs='?',
+        default=None, const=True,
+        help='plot the pipeline result in a file if <image_file> specified.'
+        'If -p is used without argument, render the figure to screen')
 
     parser.add_argument(
-        '-o', '--output', metavar='<file.mat>', default=None,
+        '-o', '--output', metavar='<mat_file>', default=None,
         help='output file in Matlab format, default is <wav>.mat')
 
     parser.add_argument(
@@ -111,17 +113,17 @@ def parse_args(argv=sys.argv[1:]):
         'if not specified read up to the end')
 
     parser.add_argument(
-        '-c', '--config', type=str, metavar='<file.cfg>', required=True,
+        '-c', '--config', type=str, metavar='<config_file>', required=True,
         help='configuration file to load')
 
     parser.add_argument(
-        'wav', nargs=1,
+        'wav', nargs=1, metavar='<wav_file>',
         help='input wav file')
 
     args = parser.parse_args(argv)
     args.wav = args.wav[0]
     args.output = (os.path.splitext(args.wav)[0] + '.mat'
-                   if args.output is None else args.output[0])
+                   if args.output is None else args.output)
     return args
 
 
@@ -154,12 +156,14 @@ def main(argv=sys.argv[1:]):
         accurate=str2bool(config.get('filterbank', 'accurate')))
 
     # compute delta and delta-delta on spectrogram
-    delta = pipeline.apply_delta(spectrogram)
-    delta_delta = pipeline.apply_deltadelta(spectrogram)
+    spectrogram = {
+        'raw': spectrogram,
+        'delta': pipeline.apply_delta(spectrogram),
+        'delta_delta': pipeline.apply_deltadelta(spectrogram)}
 
     # compute DCT on spectrogram
     dct = pipeline.apply_dct(
-        spectrogram,
+        spectrogram['raw'],
         norm=str2bool(config.get('dct', 'normalize')),
         size=config.getint('dct', 'size'))
 
@@ -172,11 +176,10 @@ def main(argv=sys.argv[1:]):
         config.get('pitch', 'options'))
 
     # compute delta and delta-delta on pitch as well
-    pitch_d = pipeline.apply_delta(pitch)
-    pitch_dd = pipeline.apply_deltadelta(pitch)
-
-    pitch = {'raw': pitch, 'delta': pitch_d, 'delta_delta': pitch_dd}
-    spectrogram = {'raw': spectrogram, 'delta': delta, 'delta_delta': delta_delta}
+    pitch = {
+        'raw': pitch,
+        'delta': pipeline.apply_delta(pitch),
+        'delta_delta': pipeline.apply_deltadelta(pitch)}
 
     # save results
     log.info('saving to %s', args.output)
@@ -192,9 +195,12 @@ def main(argv=sys.argv[1:]):
 
     # plot results
     if args.plot:
+        log.info('plotting to %s', 'screen' if args.plot is True else args.plot)
         plot.plot_pipeline(
-            sample_frequency, config.getfloat('filterbank', 'low_frequency'),
-            audio, spectrogram, dct, pov, pitch)
+            sample_frequency,
+            config.getfloat('filterbank', 'low_frequency'),
+            audio, spectrogram, dct, pov, pitch,
+            output_file=args.plot if isinstance(args.plot, str) else None)
 
 
 if __name__ == '__main__':

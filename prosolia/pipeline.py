@@ -238,10 +238,9 @@ def apply_dct(array, norm=False, size=8):
     logging.getLogger('prosolia').debug('computing DCT')
 
     from scipy.fftpack import dct
-    return dct(
-        array, type=2, axis=0,
-        norm='ortho' if norm is True else None
-    )[:size, :]
+    return dct(array, type=2, axis=0,
+               norm='ortho' if norm is True else None
+           )[:size, :]
 
 
 def apply_pitch(kaldi_root, wavfile, sample_frequency,
