@@ -3,13 +3,14 @@
 **speech features extraction pipeline for prosody analysis**
 
 ``` text
-                                       +--->  delta        +
-                                       |                   |
-wav +---> filterbank +---> compression +--->  delta-delta  |
-    |                                  |                   +---> .mat file
-    |                                  +--->  DCT          |
-    |                                                      |
-    +---> pitch (with deltas), probability of voicing      +
+                                              +--->  binned      +
+                                              |                  |
+                                              +--->  energy      |
+                                              |                  +---> .mat file
+   wav  +---> filterbank +---> compression +------>  delta       |
+        |                                     |                  |
+        |                                     +--->  delta-delta |
+        +---> pitch, probability of voicing                      +
 ```
 
 * wav file as input, Matlab mat file as output
@@ -19,7 +20,7 @@ wav +---> filterbank +---> compression +--->  delta-delta  |
 
 * compressed spectrogram (cubic root or log)
 
-* delta, delta-delta and dicrete cosine transform computed on spectrogram
+* delta, delta-delta and energy computed on spectrogram
 
 * pitch estimation and probability of voicing (from
   [Kaldi](http://kaldi-asr.org))
@@ -79,7 +80,7 @@ python setup.py install
 
 ## Licence
 
-**Copyright 2016 Mathieu Bernard**
+**Copyright 2016, 2017 Mathieu Bernard**
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

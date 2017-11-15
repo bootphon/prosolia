@@ -1,4 +1,4 @@
-# Copyright 2016 Mathieu Bernard
+# Copyright 2016, 2017 Mathieu Bernard
 #
 # You can redistribute this file and/or modify it under the terms of
 # the GNU General Public License as published by the Free Software
@@ -125,7 +125,7 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
               else gammatone.fftweight.fft_gtgram)
 
     logging.getLogger('prosolia').debug(
-        'computing filterbank energy on %s channels, %s compression%s',
+        'computing gammatone filterbank on %s channels, %s compression%s',
         nb_channels, compression, ', accurate' if accurate else '')
 
     # get the center frequencies in increasing order
@@ -151,6 +151,23 @@ def apply_gammatone(data, sample_frequency, nb_channels=20, low_cf=20,
 
     return output, center_frequencies
 
+
+def apply_energy(array):
+    """Compute energy features on a 2D array
+
+    Parameters:
+    -----------
+
+    array (2D numpy array): input time/frequency matrix
+
+    Returns:
+    --------
+
+    energy: a numpy array with energy computed over the frequency axis
+
+    """
+    logging.getLogger('prosolia').debug('computing energy')
+    return np.sum(array ** 2, axis=0)
 
 def apply_delta(array):
     """Compute delta features on a 2D array
