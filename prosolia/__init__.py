@@ -1,4 +1,4 @@
-# Copyright 2016 Mathieu Bernard
+# Copyright 2016, 2017 Mathieu Bernard
 #
 # You can redistribute this file and/or modify it under the terms of
 # the GNU General Public License as published by the Free Software

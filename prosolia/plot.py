@@ -1,4 +1,4 @@
-# Copyright 2016 Mathieu Bernard
+# Copyright 2016, 2017 Mathieu Bernard
 #
 # You can redistribute this file and/or modify it under the terms of
 # the GNU General Public License as published by the Free Software
@@ -20,7 +20,7 @@ import numpy as np
 
 
 def plot_pipeline(sample_frequency, low_frequency, audio,
-                  spectrogram, dct_output, pov, pitch,
+                  spectrogram, pov, pitch,
                   output_file=None):
     """Plot the whole prosalia output as 4 subplots
 
@@ -28,11 +28,11 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
     format guessed from extension), else render it to screen.
 
     Displays audio signal (plot 1), probability of voicing and pitch
-    estimation (plot 2), filterbank output (plot 3) and DCT output
-    (plot 4).
+    estimation (plot 2), filterbank output (plot 3) and filterbank
+    energy (plot 4).
 
     """
-    fig, (ax0, ax1, ax2, ax3, ax4, ax5) = plt.subplots(nrows=6, sharex=True)
+    fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4, sharex=True)
     fig.subplots_adjust(wspace=0, hspace=0)
 
     plot_audio(ax0, audio, sample_frequency)
@@ -41,22 +41,12 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
 
     plot_filterbank(
         fig, ax2, sample_frequency, low_frequency,
-        len(audio) / sample_frequency, spectrogram['raw'],
+        len(audio) / sample_frequency, spectrogram['binned'],
         label='spectrogram')
 
-    plot_filterbank(
-        fig, ax3, sample_frequency, low_frequency,
-        len(audio) / sample_frequency, spectrogram['delta'],
-        label='delta')
+    plot_energy(ax3, len(audio)/sample_frequency, spectrogram['energy'])
 
-    plot_filterbank(
-        fig, ax4, sample_frequency, low_frequency,
-        len(audio) / sample_frequency, spectrogram['delta_delta'],
-        label='delta delta')
-
-    plot_dct(fig, ax5, len(audio)/sample_frequency, dct_output)
-
-    ax5.set_xlabel('time (s)')
+    ax3.set_xlabel('time (s)')
     fig.tight_layout()
 
     if output_file:
@@ -65,13 +55,20 @@ def plot_pipeline(sample_frequency, low_frequency, audio,
         plt.show()
 
 
-def plot_audio(axes, data, sample_frequency):
+def plot_audio(axes, data, sample_frequency, label='amplitude'):
     """Plot the audio signal"""
     time = np.linspace(0, len(data)/sample_frequency, num=len(data))
-    axes.set_ylabel('amplitude')
+    axes.set_ylabel(label)
     axes.set_xlim([0, time[-1]])
     axes.plot(time, data)
 
+
+def plot_energy(axes, duration, energy):
+    """Plot the filterbank energy over time"""
+    time = np.linspace(0, duration, num=len(energy))
+    axes.set_ylabel('energy')
+    axes.set_xlim([0, time[-1]])
+    axes.plot(time, energy)
 
 def plot_pitch(axes, duration, pov, pitch):
     """Plot the pitch estimation and probability of voicing"""
@@ -79,13 +76,13 @@ def plot_pitch(axes, duration, pov, pitch):
 
     par1 = axes.twinx()
     p1, = axes.plot(time, pov, 'b', label="NCCF")
-    p2, = par1.plot(time, pitch['raw'], 'r', ls='-', label="pitch (Hz)")
+    p2, = par1.plot(time, pitch, 'r', ls='-', label="pitch (Hz)")
 
     axes.set_xlim(0, duration)
     axes.set_ylim(-1, 1)
 
     # round max pitch to the upper hundredth for nice plotting
-    par1.set_ylim(0, int(math.ceil(pitch['raw'].max() / 100.0)) * 100)
+    par1.set_ylim(0, int(math.ceil(pitch.max() / 100.0)) * 100)
 
     axes.set_ylabel("NCCF")
     par1.set_ylabel("pitch (Hz)")

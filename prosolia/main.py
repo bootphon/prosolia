@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2016 Mathieu Bernard
+# Copyright 2016, 2017 Mathieu Bernard
 #
 # You can redistribute this file and/or modify it under the terms of
 # the GNU General Public License as published by the Free Software
@@ -63,8 +63,6 @@ def str2bool(s, safe=False):
     If s is already a bool return it, else raise TypeError.
     If `safe` is True, never raise but return False instead.
 
-    From abkhazia.utils
-
     """
     if isinstance(s, bool):
         return s
@@ -95,7 +93,7 @@ def parse_args(argv=sys.argv[1:]):
     parser.add_argument(
         '-p', '--plot', metavar='<image_file>', nargs='?',
         default=None, const=True,
-        help='plot the pipeline result in a file if <image_file> specified.'
+        help='plot the pipeline result in a file if <image_file> specified. '
         'If -p is used without argument, render the figure to screen')
 
     parser.add_argument(
@@ -150,22 +148,15 @@ def main(argv=sys.argv[1:]):
         audio, sample_frequency,
         nb_channels=config.getint('filterbank', 'nb_channels'),
         low_cf=config.getfloat('filterbank', 'low_frequency'),
-        window_time=config.getfloat('energy', 'window_time'),
-        overlap_time=eval(config.get('energy', 'overlap_time')),
-        compression=config.get('energy', 'compression'),
+        window_time=config.getfloat('filterbank', 'window_time'),
+        overlap_time=eval(config.get('filterbank', 'overlap_time')),
+        compression=config.get('filterbank', 'compression'),
         accurate=str2bool(config.get('filterbank', 'accurate')))
 
     # compute delta and delta-delta on spectrogram
     spectrogram = {
-        'raw': spectrogram,
-        'delta': pipeline.apply_delta(spectrogram),
-        'delta_delta': pipeline.apply_deltadelta(spectrogram)}
-
-    # compute DCT on spectrogram
-    dct = pipeline.apply_dct(
-        spectrogram['raw'],
-        norm=str2bool(config.get('dct', 'normalize')),
-        size=config.getint('dct', 'size'))
+        'binned': spectrogram,
+        'energy': pipeline.apply_energy(spectrogram)}
 
     # compute pitch and probability of voicing
     pov, pitch = pipeline.apply_pitch(
@@ -174,12 +165,6 @@ def main(argv=sys.argv[1:]):
         eval(config.get('pitch', 'frame_length')),
         eval(config.get('pitch', 'frame_shift')),
         config.get('pitch', 'options'))
-
-    # compute delta and delta-delta on pitch as well
-    pitch = {
-        'raw': pitch,
-        'delta': pipeline.apply_delta(pitch),
-        'delta_delta': pipeline.apply_deltadelta(pitch)}
 
     # save results
     log.info('saving to %s', args.output)
@@ -190,7 +175,6 @@ def main(argv=sys.argv[1:]):
         'center_frequencies': center_frequencies,
         'spectrogram': spectrogram,
         'pitch': pitch,
-        'dct': dct,
         'pov': pov})
 
     # plot results
@@ -199,7 +183,7 @@ def main(argv=sys.argv[1:]):
         plot.plot_pipeline(
             sample_frequency,
             config.getfloat('filterbank', 'low_frequency'),
-            audio, spectrogram, dct, pov, pitch,
+            audio, spectrogram, pov, pitch,
             output_file=args.plot if isinstance(args.plot, str) else None)
 
 

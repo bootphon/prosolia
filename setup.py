@@ -18,7 +18,7 @@ import setuptools
 
 setuptools.setup(
     name='prosolia',
-    version='0.1',
+    version='0.2',
     author='Mathieu Bernard',
     author_email='mmathieubernardd@gmail.com',
     license='GPL3',
